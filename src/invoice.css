@@ -1,28 +1,113 @@
 .ant-card {
   max-width: 1200px;
-  margin: 0 auto;
+  margin: 20px auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  padding: 24px;
 }
 
 .ant-form-item-label {
-  font-weight: 500;
+  font-weight: 600;
+  color: #2c3e50;
 }
 
 .ant-table {
   background: #fff;
   border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .ant-table-thead > tr > th {
-  background: #f5f5f5;
+  background: #f8fafc;
   font-weight: 600;
+  color: #2c3e50;
+  padding: 16px 12px;
+}
+
+.ant-table-tbody > tr > td {
+  padding: 16px 12px;
 }
 
 .ant-input-number {
   width: 100%;
+  border-radius: 6px;
 }
 
-.ant-form-item-explain-error {
+/* Remove validation state by default */
+.ant-form-item:not(.ant-form-item-with-help) .ant-form-item-explain {
+  display: none;
+}
+
+.ant-input-number:not(.ant-input-number-status-error),
+.ant-input:not(.ant-input-status-error) {
+  border-color: #d9d9d9;
+}
+
+/* Only show validation errors when form is submitted or field is touched */
+.ant-form-item-has-error .ant-form-item-explain {
+  display: block;
   font-size: 12px;
+  margin-top: 4px;
+  color: #ff4d4f;
+}
+
+/* Title styling */
+.ant-typography h2 {
+  color: #1a365d;
+  margin-bottom: 32px;
+  font-weight: 600;
+}
+
+/* Button styling */
+.ant-btn-primary {
+  background: #2563eb;
+  border-color: #2563eb;
+  border-radius: 6px;
+  height: 40px;
+  padding: 0 24px;
+  font-weight: 500;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.1);
+}
+
+.ant-btn-primary:hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+/* Form layout improvements */
+.ant-form-item {
+  margin-bottom: 24px;
+}
+
+.ant-input,
+.ant-input-number,
+.ant-picker,
+.ant-select-selector {
+  border-radius: 6px !important;
+  padding: 8px 12px !important;
+  height: auto !important;
+}
+
+/* Total amount styling */
+h3.ant-typography {
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+/* Table cell validation styling */
+.ant-table-cell .ant-form-item {
+  margin-bottom: 0;
+}
+
+.ant-table-cell .ant-form-item-explain {
+  position: absolute;
+  bottom: -20px;
+  left: 0;
+  background: white;
+  padding: 2px 4px;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 1;
 }
 
 /* Responsive adjustments */
@@ -30,6 +115,7 @@
   .ant-card {
     margin: 0;
     border-radius: 0;
+    padding: 16px;
   }
 
   .ant-table {
@@ -46,10 +132,45 @@
   .ant-card {
     box-shadow: none;
     border: none;
+    padding: 0;
   }
 
   .ant-btn,
   .ant-table-column-sorters {
     display: none;
   }
+
+  .ant-table {
+    box-shadow: none;
+  }
+
+  .ant-table-thead > tr > th {
+    background: #f8f8f8 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 }
+
+/* PDF-specific styles */
+.pdf-preview {
+  border: 1px solid #d9d9d9;
+  padding: 20px;
+  margin: 20px 0;
+  background: white;
+}
+
+.pdf-preview .header,
+.pdf-preview .footer {
+  border-top: 2px solid #000;
+  border-bottom: 2px solid #000;
+  padding: 10px 0;
+  margin: 10px 0;
+}
+
+.pdf-preview .content {
+  border-left: 1px solid #d9d9d9;
+  border-right: 1px solid #d9d9d9;
+  min-height: 500px;
+  padding: 20px;
+}
+

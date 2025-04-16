@@ -31,8 +31,9 @@ const validateGSTIN = (gstin) => {
 
 const TaxInvoiceForm = () => {
   const [form] = Form.useForm();
+  const [gstType, setGstType] = useState('igst'); // 'igst' or 'sgst'
   const [items, setItems] = useState([
-    { description: "", hsnCode: "", qty: 0, gst: 18, rate: 0, amount: 0 },
+    { description: "", hsnCode: "", qty: "", gst: 18, rate: "", amount: 0 },
   ]);
 
   const handleItemChange = useCallback((index, field, value) => {
@@ -45,16 +46,38 @@ const TaxInvoiceForm = () => {
       const rate = field === 'rate' ? value : newItems[index].rate;
       const gst = field === 'gst' ? value : newItems[index].gst;
 
-      const baseAmount = qty * rate;
-      const gstAmount = (baseAmount * gst) / 100;
-      newItems[index].amount = baseAmount + gstAmount;
+      // Only calculate if both qty and rate are valid numbers
+      if (qty && rate) {
+        const baseAmount = parseFloat(qty) * parseFloat(rate);
+        const gstAmount = (baseAmount * gst) / 100;
+        newItems[index].amount = baseAmount + gstAmount;
+      } else {
+        newItems[index].amount = 0;
+      }
     }
 
     setItems(newItems);
   }, [items]);
 
+  const calculateGSTBreakup = useCallback((baseAmount, gstRate) => {
+    if (gstType === 'igst') {
+      return {
+        igst: (baseAmount * gstRate) / 100,
+        cgst: 0,
+        sgst: 0
+      };
+    } else {
+      const halfGstRate = gstRate / 2;
+      return {
+        igst: 0,
+        cgst: (baseAmount * halfGstRate) / 100,
+        sgst: (baseAmount * halfGstRate) / 100
+      };
+    }
+  }, [gstType]);
+
   const addItemRow = () => {
-    setItems([...items, { description: "", hsnCode: "", qty: 0, gst: 18, rate: 0, amount: 0 }]);
+    setItems([...items, { description: "", hsnCode: "", qty: "", gst: 18, rate: "", amount: 0 }]);
   };
 
   const removeItemRow = (index) => {
@@ -63,7 +86,14 @@ const TaxInvoiceForm = () => {
   };
 
   const calculateTotal = () => {
-    return items.reduce((total, item) => total + item.amount, 0).toFixed(2);
+    const baseTotal = items.reduce((total, item) => {
+      const qty = parseFloat(item.qty) || 0;
+      const rate = parseFloat(item.rate) || 0;
+      return total + (qty * rate);
+    }, 0);
+    const gstBreakup = calculateGSTBreakup(baseTotal, 18); // Using 18% as default GST rate
+    const totalGST = gstBreakup.igst + gstBreakup.cgst + gstBreakup.sgst;
+    return (baseTotal + totalGST).toFixed(2);
   };
 
   const generatePDF = (invoiceData) => {
@@ -74,8 +104,18 @@ const TaxInvoiceForm = () => {
       });
   
       const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
       const margin = 20;
       let y = margin;
+
+      // Add page border
+      doc.setDrawColor(0);
+      doc.setLineWidth(0.5);
+      doc.rect(margin/2, margin/2, pageWidth - margin, pageHeight - margin);
+      
+      // Add inner border with some padding
+      doc.setLineWidth(0.3);
+      doc.rect(margin, margin, pageWidth - (margin * 2), pageHeight - (margin * 2));
   
       const centerText = (text, yPos, fontSize = 12, bold = false) => {
         doc.setFontSize(fontSize);
@@ -85,7 +125,10 @@ const TaxInvoiceForm = () => {
         doc.text(text, x, yPos);
       };
   
-      // Company Info
+      // Company Info with styling
+      doc.setFillColor(240, 240, 240);
+      doc.rect(margin, y - 5, pageWidth - (margin * 2), 25, 'F');
+      
       centerText('SURYA POWER', y, 16, true);
       y += 6;
       centerText('No. 1/11 , GNT Road, Balaji Street, Padiyanallur, Chennai - 600052', y);
@@ -93,7 +136,9 @@ const TaxInvoiceForm = () => {
       centerText('GSTIN: 33AKPPR3673B1ZW | Mobile: 97909 97190 | Email: suryapower1970@gmail.com', y);
       y += 8;
   
-      // Invoice Title
+      // Invoice Title with background
+      doc.setFillColor(220, 220, 220);
+      doc.rect(margin, y - 5, pageWidth - (margin * 2), 10, 'F');
       centerText('TAX INVOICE', y, 14, true);
       y += 10;
   
@@ -104,32 +149,40 @@ const TaxInvoiceForm = () => {
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
   
-      doc.text(`Invoice No: ${invoiceNo}`, margin, y);
+      // Add box around invoice details
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.1);
+      doc.rect(margin, y - 2, pageWidth - (margin * 2), 15);
+
+      doc.text(`Invoice No: ${invoiceNo}`, margin + 5, y);
       doc.text(`Date: ${invoiceDate}`, pageWidth - margin - 50, y);
       y += 8;
   
-      // Bill To Section with line wrapping
+      // Bill To Section with border
+      doc.setDrawColor(200, 200, 200);
+      doc.rect(margin, y - 2, pageWidth - (margin * 2), 40);
+      
       doc.setFont('helvetica', 'bold');
-      doc.text('Bill To:', margin, y);
+      doc.text('Bill To:', margin + 5, y);
       doc.setFont('helvetica', 'normal');
       y += 5;
   
-      const customerAddressLines = doc.splitTextToSize(customerAddress || '', pageWidth - margin * 2);
-      doc.text(customerName || '', margin, y);
+      const customerAddressLines = doc.splitTextToSize(customerAddress || '', pageWidth - (margin * 2) - 10);
+      doc.text(customerName || '', margin + 5, y);
       y += 5;
       customerAddressLines.forEach(line => {
-        doc.text(line, margin, y);
+        doc.text(line, margin + 5, y);
         y += 5;
       });
   
       if (partyGstin) {
-        doc.text(`GSTIN: ${partyGstin}`, margin, y);
+        doc.text(`GSTIN: ${partyGstin}`, margin + 5, y);
         y += 5;
       }
   
       y += 2;
   
-      // Item Table
+      // Item Table with improved styling
       const tableColumn = ['S.No', 'Description', 'HSN/SAC', 'Qty', 'Rate', 'Amount'];
       const tableRows = [];
   
@@ -149,36 +202,65 @@ const TaxInvoiceForm = () => {
         startY: y,
         head: [tableColumn],
         body: tableRows,
-        styles: { fontSize: 9 },
-        headStyles: { fillColor: [220, 220, 220] },
+        styles: { 
+          fontSize: 9,
+          cellPadding: 2,
+          lineWidth: 0.1,
+        },
+        headStyles: { 
+          fillColor: [220, 220, 220],
+          textColor: [0, 0, 0],
+          fontStyle: 'bold',
+        },
         margin: { left: margin, right: margin },
         theme: 'grid',
       });
   
       y = doc.lastAutoTable.finalY + 10;
   
-      // Totals Section
+      // Totals Section with box
       let totalAmount = invoiceData.items.reduce((sum, item) => sum + item.qty * item.rate, 0);
-      let gstAmount = invoiceData.includeGST ? totalAmount * 0.18 : 0;
-      let finalAmount = totalAmount + gstAmount;
+      
+      // Calculate GST based on type
+      const gstBreakup = calculateGSTBreakup(totalAmount, 18); // Using 18% as default GST rate
+      const totalGST = gstBreakup.igst + gstBreakup.cgst + gstBreakup.sgst;
+      let finalAmount = totalAmount + totalGST;
   
+      // Draw box around totals
+      doc.setDrawColor(200, 200, 200);
+      doc.rect(pageWidth - margin - 80, y - 5, 80, gstType === 'igst' ? 25 : 35);
+
       doc.setFontSize(10);
       doc.text(`Subtotal: ₹ ${totalAmount.toFixed(2)}`, pageWidth - margin - 60, y);
       y += 5;
-      doc.text(`GST (18%): ₹ ${gstAmount.toFixed(2)}`, pageWidth - margin - 60, y);
-      y += 5;
+
+      if (gstType === 'igst') {
+        doc.text(`IGST (18%): ₹ ${gstBreakup.igst.toFixed(2)}`, pageWidth - margin - 60, y);
+        y += 5;
+      } else {
+        doc.text(`CGST (9%): ₹ ${gstBreakup.cgst.toFixed(2)}`, pageWidth - margin - 60, y);
+        y += 5;
+        doc.text(`SGST (9%): ₹ ${gstBreakup.sgst.toFixed(2)}`, pageWidth - margin - 60, y);
+        y += 5;
+      }
+
       doc.setFont('helvetica', 'bold');
       doc.text(`Grand Total: ₹ ${finalAmount.toFixed(2)}`, pageWidth - margin - 60, y);
       doc.setFont('helvetica', 'normal');
       y += 10;
   
-      // Declaration
+      // Declaration with border
       const declaration = 'Declaration: We hereby certify that the goods/services mentioned in this invoice are correct and have been supplied in accordance with the purchase order.';
       const declarationLines = doc.splitTextToSize(declaration, pageWidth - margin * 2);
-      doc.text(declarationLines, margin, y);
+      
+      doc.setDrawColor(200, 200, 200);
+      doc.rect(margin, y - 2, pageWidth - (margin * 2), declarationLines.length * 5 + 5);
+      doc.text(declarationLines, margin + 5, y);
       y += declarationLines.length * 5 + 10;
   
-      // Signature
+      // Signature section with border
+      doc.setDrawColor(200, 200, 200);
+      doc.rect(pageWidth - margin - 80, y - 2, 80, 30);
       doc.text('For SURYA POWER', pageWidth - margin - 50, y);
       y += 20;
       doc.text('Authorised Signatory', pageWidth - margin - 50, y);
@@ -197,14 +279,13 @@ const TaxInvoiceForm = () => {
       render: (text, _, index) => (
         <Form.Item
           style={{ margin: 0 }}
-          validateStatus={!text ? 'error' : 'success'}
-          help={!text ? 'Required' : null}
+          validateStatus={text === '' ? 'error' : ''}
+          help={text === '' ? 'Required' : null}
         >
           <Input
             value={text}
             onChange={(e) => handleItemChange(index, 'description', e.target.value)}
             placeholder="Item description"
-            status={!text ? 'error' : ''}
           />
         </Form.Item>
       )
@@ -222,15 +303,14 @@ const TaxInvoiceForm = () => {
       render: (value, _, index) => (
         <Form.Item
           style={{ margin: 0 }}
-          validateStatus={!value || value <= 0 ? 'error' : 'success'}
-          help={!value || value <= 0 ? 'Required' : null}
+          validateStatus={value === '' || value === null ? 'error' : ''}
+          help={value === '' || value === null ? 'Required' : null}
         >
           <InputNumber
             min={0}
             value={value}
             onChange={(value) => handleItemChange(index, 'qty', value)}
             style={{ width: '100%' }}
-            status={!value || value <= 0 ? 'error' : ''}
           />
         </Form.Item>
       )
@@ -254,15 +334,14 @@ const TaxInvoiceForm = () => {
       render: (value, _, index) => (
         <Form.Item
           style={{ margin: 0 }}
-          validateStatus={!value || value <= 0 ? 'error' : 'success'}
-          help={!value || value <= 0 ? 'Required' : null}
+          validateStatus={value === '' || value === null ? 'error' : ''}
+          help={value === '' || value === null ? 'Required' : null}
         >
           <InputNumber
             min={0}
             value={value}
             onChange={(value) => handleItemChange(index, 'rate', value)}
             style={{ width: '100%' }}
-            status={!value || value <= 0 ? 'error' : ''}
           />
         </Form.Item>
       )
@@ -402,6 +481,21 @@ const TaxInvoiceForm = () => {
             </Form.Item>
           </Col>
         </Row>
+        
+        <Row gutter={24}>
+          <Col xs={24} sm={8}>
+            <Form.Item
+              name="gstType"
+              label="GST Type"
+              initialValue={gstType}
+            >
+              <Select onChange={(value) => setGstType(value)}>
+                <Option value="igst">IGST</Option>
+                <Option value="sgst">SGST + CGST</Option>
+              </Select>
+            </Form.Item>
+          </Col>
+        </Row>
 
         <Title level={4}>Item Details</Title>
         <Table
@@ -456,6 +550,19 @@ const TaxInvoiceForm = () => {
 };
 
 export default TaxInvoiceForm;
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
