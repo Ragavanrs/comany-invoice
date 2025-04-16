@@ -1,83 +1,23 @@
-.App {
-  text-align: center;
-  padding: 20px;
+.layout {
+  min-height: 100vh;
 }
 
-form {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 20px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
+.site-layout-content {
+  background: #fff;
+  padding: 24px;
+  min-height: 280px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-form div {
-  margin-bottom: 15px;
-}
-
-label {
-  display: inline-block;
-  width: 150px;
-  text-align: right;
-  margin-right: 10px;
-}
-
-input, textarea {
-  width: 300px;
-  padding: 5px;
-}
-
-button {
-  margin: 10px;
-  padding: 8px 15px;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-button:hover {
-  background-color: #0056b3;
-}
-
-h1 {
-  color: #333;
-  margin-bottom: 30px;
-}
-
-.item-row {
+.ant-layout-content {
   display: flex;
-  gap: 10px;
-  margin-bottom: 10px;
+  justify-content: center;
 }
 
-.item-row input {
-  width: 150px;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 20px;
-}
-
-th, td {
-  border: 1px solid #ddd;
-  padding: 8px;
-  text-align: left;
-}
-
-th {
-  background-color: #f4f4f4;
-}
-
-td input, td select {
-  width: 100%;
-  padding: 4px;
-  box-sizing: border-box;
-}
-
-tr:nth-child(even) {
-  background-color: #f9f9f9;
+@media (max-width: 768px) {
+  .site-layout-content {
+    margin: 0;
+    padding: 16px;
+  }
 }
