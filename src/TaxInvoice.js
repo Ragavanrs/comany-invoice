@@ -15,9 +15,8 @@ import {
   message
 } from "antd";
 import { PlusOutlined, MinusCircleOutlined } from "@ant-design/icons";
-import jsPDF from "jspdf";
-import 'jspdf-autotable';
 import dayjs from 'dayjs';
+import { generatePDF } from './pdfGenerator';
 import "./invoice.css";
 
 const { Title } = Typography;
@@ -96,181 +95,43 @@ const TaxInvoiceForm = () => {
     return (baseTotal + totalGST).toFixed(2);
   };
 
-  const generatePDF = (invoiceData) => {
-      const doc = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-      });
-  
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      const margin = 20;
-      let y = margin;
+  const validateItems = () => {
+    if (!items || items.length === 0) {
+      message.error('Please add at least one item');
+      return false;
+    }
 
-      // Add page border
-      doc.setDrawColor(0);
-      doc.setLineWidth(0.5);
-      doc.rect(margin/2, margin/2, pageWidth - margin, pageHeight - margin);
-      
-      // Add inner border with some padding
-      doc.setLineWidth(0.3);
-      doc.rect(margin, margin, pageWidth - (margin * 2), pageHeight - (margin * 2));
-  
-      const centerText = (text, yPos, fontSize = 12, bold = false) => {
-        doc.setFontSize(fontSize);
-        doc.setFont('helvetica', bold ? 'bold' : 'normal');
-        const textWidth = doc.getTextWidth(text);
-        const x = (pageWidth - textWidth) / 2;
-        doc.text(text, x, yPos);
-      };
-  
-      // Company Info with styling
-      doc.setFillColor(240, 240, 240);
-      doc.rect(margin, y - 5, pageWidth - (margin * 2), 25, 'F');
-      
-      centerText('SURYA POWER', y, 16, true);
-      y += 6;
-      centerText('No. 1/11 , GNT Road, Balaji Street, Padiyanallur, Chennai - 600052', y);
-      y += 5;
-      centerText('GSTIN: 33AKPPR3673B1ZW | Mobile: 97909 97190 | Email: suryapower1970@gmail.com', y);
-      y += 8;
-  
-      // Invoice Title with background
-      doc.setFillColor(220, 220, 220);
-      doc.rect(margin, y - 5, pageWidth - (margin * 2), 10, 'F');
-      centerText('TAX INVOICE', y, 14, true);
-      y += 10;
-  
-      // Invoice and Customer Details
-      const { invoiceNo, date, customerName, customerAddress, partyGstin } = invoiceData;
-      const invoiceDate = date.format('DD-MM-YYYY');
-  
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-  
-      // Add box around invoice details
-      doc.setDrawColor(200, 200, 200);
-      doc.setLineWidth(0.1);
-      doc.rect(margin, y - 2, pageWidth - (margin * 2), 15);
+    const invalidItems = items.filter(
+      item => !item.description || !item.qty || !item.rate
+    );
 
-      doc.text(`Invoice No: ${invoiceNo}`, margin + 5, y);
-      doc.text(`Date: ${invoiceDate}`, pageWidth - margin - 50, y);
-      y += 8;
-  
-      // Bill To Section with border
-      doc.setDrawColor(200, 200, 200);
-      doc.rect(margin, y - 2, pageWidth - (margin * 2), 40);
-      
-      doc.setFont('helvetica', 'bold');
-      doc.text('Bill To:', margin + 5, y);
-      doc.setFont('helvetica', 'normal');
-      y += 5;
-  
-      const customerAddressLines = doc.splitTextToSize(customerAddress || '', pageWidth - (margin * 2) - 10);
-      doc.text(customerName || '', margin + 5, y);
-      y += 5;
-      customerAddressLines.forEach(line => {
-        doc.text(line, margin + 5, y);
-        y += 5;
-      });
-  
-      if (partyGstin) {
-        doc.text(`GSTIN: ${partyGstin}`, margin + 5, y);
-        y += 5;
-      }
-  
-      y += 2;
-  
-      // Item Table with improved styling
-      const tableColumn = ['S.No', 'Description', 'HSN/SAC', 'Qty', 'Rate', 'Amount'];
-      const tableRows = [];
-  
-      invoiceData.items.forEach((item, index) => {
-        const amount = item.qty * item.rate;
-        tableRows.push([
-          index + 1,
-          item.description,
-          item.hsn || '',
-          item.qty,
-          item.rate.toFixed(2),
-          amount.toFixed(2),
-        ]);
-      });
-  
-      doc.autoTable({
-        startY: y,
-        head: [tableColumn],
-        body: tableRows,
-        styles: { 
-          fontSize: 9,
-          cellPadding: 2,
-          lineWidth: 0.1,
-        },
-        headStyles: { 
-          fillColor: [220, 220, 220],
-          textColor: [0, 0, 0],
-          fontStyle: 'bold',
-        },
-        margin: { left: margin, right: margin },
-        theme: 'grid',
-      });
-  
-      y = doc.lastAutoTable.finalY + 10;
-  
-      // Totals Section with box
-      let totalAmount = invoiceData.items.reduce((sum, item) => sum + item.qty * item.rate, 0);
-      
-      // Calculate GST based on type
-      const gstBreakup = calculateGSTBreakup(totalAmount, 18); // Using 18% as default GST rate
-      const totalGST = gstBreakup.igst + gstBreakup.cgst + gstBreakup.sgst;
-      let finalAmount = totalAmount + totalGST;
-  
-      // Draw box around totals
-      doc.setDrawColor(200, 200, 200);
-      doc.rect(pageWidth - margin - 80, y - 5, 80, gstType === 'igst' ? 25 : 35);
+    if (invalidItems.length > 0) {
+      message.error('Please complete all item details (Description, Quantity, and Rate are required)');
+      return false;
+    }
 
-      doc.setFontSize(10);
-      doc.text(`Subtotal: ₹ ${totalAmount.toFixed(2)}`, pageWidth - margin - 60, y);
-      y += 5;
+    return true;
+  };
 
-      if (gstType === 'igst') {
-        doc.text(`IGST (18%): ₹ ${gstBreakup.igst.toFixed(2)}`, pageWidth - margin - 60, y);
-        y += 5;
-      } else {
-        doc.text(`CGST (9%): ₹ ${gstBreakup.cgst.toFixed(2)}`, pageWidth - margin - 60, y);
-        y += 5;
-        doc.text(`SGST (9%): ₹ ${gstBreakup.sgst.toFixed(2)}`, pageWidth - margin - 60, y);
-        y += 5;
-      }
+  const onFinish = (values) => {
+    if (!validateItems()) {
+      return;
+    }
 
-      doc.setFont('helvetica', 'bold');
-      doc.text(`Grand Total: ₹ ${finalAmount.toFixed(2)}`, pageWidth - margin - 60, y);
-      doc.setFont('helvetica', 'normal');
-      y += 10;
-  
-      // Declaration with border
-      const declaration = 'Declaration: We hereby certify that the goods/services mentioned in this invoice are correct and have been supplied in accordance with the purchase order.';
-      const declarationLines = doc.splitTextToSize(declaration, pageWidth - margin * 2);
-      
-      doc.setDrawColor(200, 200, 200);
-      doc.rect(margin, y - 2, pageWidth - (margin * 2), declarationLines.length * 5 + 5);
-      doc.text(declarationLines, margin + 5, y);
-      y += declarationLines.length * 5 + 10;
-  
-      // Signature section with border
-      doc.setDrawColor(200, 200, 200);
-      doc.rect(pageWidth - margin - 80, y - 2, 80, 30);
-      doc.text('For SURYA POWER', pageWidth - margin - 50, y);
-      y += 20;
-      doc.text('Authorised Signatory', pageWidth - margin - 50, y);
-  
-      const monthName = date.format('MMMM');
-      const year = date.format('YYYY');
-
-      const fileName = `${invoiceNo}_SURYA_POWER_${monthName}_${year}.pdf`;
-      doc.save(fileName);
+    // Format values for PDF generation
+    const formattedValues = {
+      ...values,
+      items: items.map(item => ({
+        ...item,
+        hsn: item.hsnCode || '',  // Ensure HSN code is never undefined
+        qty: item.qty || 0,
+        rate: item.rate || 0,
+        amount: item.amount || 0
+      }))
     };
+
+    generatePDF(formattedValues, gstType);
+  };
 
   const columns = [
     { title: 'S.No', dataIndex: 'index', key: 'index', width: '60px',
@@ -360,44 +221,6 @@ const TaxInvoiceForm = () => {
       )
     },
   ];
-
-  const validateItems = () => {
-    if (!items || items.length === 0) {
-      message.error('Please add at least one item');
-      return false;
-    }
-
-    const invalidItems = items.filter(
-      item => !item.description || !item.qty || !item.rate
-    );
-
-    if (invalidItems.length > 0) {
-      message.error('Please complete all item details (Description, Quantity, and Rate are required)');
-      return false;
-    }
-
-    return true;
-  };
-
-  const onFinish = (values) => {
-    if (!validateItems()) {
-      return;
-    }
-
-    // Format values for PDF generation
-    const formattedValues = {
-      ...values,
-      items: items.map(item => ({
-        ...item,
-        hsn: item.hsnCode || '',  // Ensure HSN code is never undefined
-        qty: item.qty || 0,
-        rate: item.rate || 0,
-        amount: item.amount || 0
-      }))
-    };
-
-    generatePDF(formattedValues);
-  };
 
   return (
     <Card>
@@ -550,26 +373,3 @@ const TaxInvoiceForm = () => {
 };
 
 export default TaxInvoiceForm;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -9,6 +9,7 @@
     "antd": "^5.24.6",
     "jspdf": "^2.5.2",
     "jspdf-autotable": "^3.8.4",
+    "pdfmake": "^0.2.18",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-scripts": "5.0.1",
