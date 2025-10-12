@@ -1,36 +1,202 @@
+/* Enhanced invoice form styles */
 .invoice-form {
-    max-width: 900px;
-    margin: 20px auto;
-    font-family: Arial, sans-serif;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-.row {
-    margin-bottom: 10px;
+/* Custom animations for form elements */
+@keyframes slideInFromLeft {
+    0% {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+    100% {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideInFromRight {
+    0% {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    100% {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeInScale {
+    0% {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Form section animations */
+.row:nth-child(odd) {
+    animation: slideInFromLeft 0.6s ease-out;
+}
+
+.row:nth-child(even) {
+    animation: slideInFromRight 0.6s ease-out;
+}
+
+/* Enhanced table styling */
+.item-table {
+    animation: fadeInScale 0.8s ease-out;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.item-table th {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: none;
+    padding: 15px 8px;
+}
+
+.item-table td {
+    border: 1px solid #e9ecef;
+    padding: 12px 8px;
+    transition: all 0.3s ease;
+}
+
+.item-table tbody tr:hover {
+    background-color: rgba(102, 126, 234, 0.05);
+    transform: scale(1.01);
+}
+
+/* Enhanced input styling */
+.item-table input,
+.item-table select {
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 8px 12px;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+}
+
+.item-table input:focus,
+.item-table select:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    transform: scale(1.02);
+}
+
+/* Custom button styles for table actions */
+.item-table .btn {
+    border-radius: 50%;
+    width: 35px;
+    height: 35px;
     display: flex;
-    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.item-table .btn:hover {
+    transform: scale(1.1) rotate(5deg);
+}
+
+/* Enhanced form layout */
+.row {
+    margin-bottom: 20px;
+    display: flex;
+    gap: 15px;
+    align-items: center;
 }
 
 .row label {
-    width: 150px;
-    font-weight: bold;
+    width: 180px;
+    font-weight: 600;
+    color: #495057;
+    font-size: 0.95rem;
 }
 
+/* Input enhancements */
 input,
 textarea,
 select {
-    padding: 5px;
+    padding: 12px 15px;
     flex: 1;
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
 }
 
-.item-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 15px;
+input:focus,
+textarea:focus,
+select:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    transform: translateY(-2px);
 }
 
-.item-table th,
-.item-table td {
-    border: 1px solid #ccc;
-    padding: 8px;
-    text-align: center;
+/* Responsive design improvements */
+@media (max-width: 768px) {
+    .row {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .row label {
+        width: 100%;
+        text-align: left;
+    }
+    
+    .item-table {
+        font-size: 0.85rem;
+    }
+    
+    .item-table th,
+    .item-table td {
+        padding: 8px 4px;
+    }
+}
+
+/* Loading states */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Success states */
+.success {
+    border-color: #28a745 !important;
+    box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25) !important;
+}
+
+/* Error states */
+.error {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+}
+
+/* Custom scrollbar for table */
+.item-table::-webkit-scrollbar {
+    height: 8px;
+}
+
+.item-table::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.item-table::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 10px;
+}
+
+.item-table::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
 }
