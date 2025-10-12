@@ -49,15 +49,12 @@ const TaxInvoiceForm = () => {
   };
 
   const addItemRow = () => {
-    setInvoiceDetails({
-      ...invoiceDetails,
-      items: [...invoiceDetails.items, { description: "", hsnCode: "", qty: 0, gst: 18, rate: 0, amount: 0 }],
-    });
+    setItems([...items, { description: "", hsnCode: "", qty: "", gst: 18, rate: "", amount: 0 }]);
   };
 
   const removeItemRow = (index) => {
-    const items = invoiceDetails.items.filter((_, i) => i !== index);
-    setInvoiceDetails({ ...invoiceDetails, items });
+    const newItems = items.filter((_, i) => i !== index);
+    setItems(newItems);
   };
 
   const calculateTotal = () => {
