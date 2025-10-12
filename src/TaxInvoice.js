@@ -49,12 +49,15 @@ const TaxInvoiceForm = () => {
   };
 
   const addItemRow = () => {
-    setItems([...items, { description: "", hsnCode: "", qty: "", gst: 18, rate: "", amount: 0 }]);
+    setInvoiceDetails({
+      ...invoiceDetails,
+      items: [...invoiceDetails.items, { description: "", hsnCode: "", qty: 0, gst: 18, rate: 0, amount: 0 }],
+    });
   };
 
   const removeItemRow = (index) => {
-    const newItems = items.filter((_, i) => i !== index);
-    setItems(newItems);
+    const items = invoiceDetails.items.filter((_, i) => i !== index);
+    setInvoiceDetails({ ...invoiceDetails, items });
   };
 
   const calculateTotal = () => {
@@ -365,20 +368,27 @@ const TaxInvoiceForm = () => {
       } else {
         // Traditional manual table with proper spacing to prevent overlap
         let currentY = startY + 12; // Increased spacing to prevent overlap
-        const rowHeight = 7; // Increased row height for better spacing
         
         // Table rows with traditional styling
         doc.setFont("helvetica", "normal");
         doc.setFontSize(9);
         details.items.forEach((item, index) => {
           // Simple grid lines with proper spacing
+          const descLines = doc.splitTextToSize(item.description || "", 35);
+          const rowHeight = Math.max(7, descLines.length * 4 + 3); // Dynamic height based on description lines
+          
           doc.setDrawColor(0, 0, 139); // Dark blue
           doc.setLineWidth(0.5);
           doc.rect(10, currentY - 4, 190, rowHeight);
           
-          // Row content with proper alignment (Rate before QTY) - adjusted positions
+          // Row content with proper alignment within cell boundaries
           doc.text((index + 1).toString(), 12, currentY);
-          doc.text(item.description, 25, currentY);
+          
+          // Handle multi-line descriptions properly
+          descLines.forEach((line, lineIndex) => {
+            doc.text(line, 25, currentY + (lineIndex * 4));
+          });
+          
           doc.text(item.hsnCode, 70, currentY);
           doc.text((parseFloat(item.rate) || 0).toFixed(2), 90, currentY);
           doc.text(Math.floor(parseFloat(item.qty) || 0).toString(), 115, currentY);
