@@ -1,78 +1,74 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import image from "../../image.png";
+import {
+  createChallanHeader,
+  createFooter,
+  formatDate,
+  ensureSpace,
+} from "./commonComponents";
+import { PDF_MARGINS, DEFAULT_COMPANY_INFO } from "./constants";
 
 /**
- * Generate Delivery Challan PDF
+ * Generate Delivery Challan PDF with multi-page pagination support
+ * 
  * @param {Object} challan - Challan details
- * @param {Object} company - Company information
+ * @param {string} challan.challanNo - Challan number
+ * @param {string} challan.date - Challan date
+ * @param {string} challan.supplierName - Supplier name
+ * @param {string} challan.supplierAddress - Supplier address
+ * @param {string} challan.recipientName - Recipient name
+ * @param {string} challan.recipientAddress - Recipient address
+ * @param {Array} challan.items - Array of items
+ * @param {Object} challan.transportDetails - Transport details
+ * @param {string} challan.terms - Terms and conditions
+ * @param {Object} company - Company information (optional)
+ * 
+ * @example
+ * generateChallanPDF({
+ *   challanNo: "DC001",
+ *   date: "2024-01-01",
+ *   items: [{ description: "Item 1", quantity: 10, unit: "pcs", remarks: "" }],
+ *   ...
+ * }, { name: "SURYA POWER", ... });
  */
 export function generateChallanPDF(challan, company = {}) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 20;
-  let yPos = margin;
+  const margin = PDF_MARGINS.page;
 
-  // Default company info
-  const companyInfo = {
-    name: company.name || "SURYA POWER",
-    tagline: company.tagline || "DG Set Hiring, Old DG Set Buying, Selling & Servicing",
-    address: company.address || "No.1/11, G.N.T Road, Padiyanallur Redhills, Chennai, Thiruvallur, Tamil Nadu - 600 052",
-    gstin: company.gstin || "33AKNPR3914K1ZT",
-    contacts: company.contacts || "Mob: 9790987190 / 9840841887",
+  // Merge with defaults
+  const companyInfo = { ...DEFAULT_COMPANY_INFO, ...company };
+
+  /**
+   * Draws the header for each page
+   * This is called for the first page and for each new page created by autoTable
+   */
+  const drawHeader = () => {
+    createChallanHeader(doc, {
+      challanNo: challan.challanNo || "N/A",
+      date: formatDate(challan.date),
+      company: companyInfo,
+    });
   };
 
-  // Header with logo and company details
-  try {
-    const logoW = 30, logoH = 18;
-    doc.addImage(image, 'PNG', margin, yPos, logoW, logoH);
-    yPos += 5;
-  } catch (err) {
-    console.error('Logo loading error:', err);
-  }
+  /**
+   * Draws the footer for each page
+   * This is called for the first page and for each new page created by autoTable
+   */
+  const drawFooter = () => {
+    createFooter(doc, {
+      text: "This is a computer-generated delivery challan",
+      showPageNumber: true,
+    });
+  };
 
-  // Company Name
-  doc.setFontSize(16);
-  doc.setFont("helvetica", "bold");
-  doc.text(companyInfo.name, margin + 35, yPos);
-  yPos += 6;
+  // ✅ Draw header/footer for page 1 BEFORE any tables
+  drawHeader();
+  drawFooter();
 
-  // Tagline
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "italic");
-  doc.text(companyInfo.tagline, margin + 35, yPos);
-  yPos += 5;
-
-  // Address
-  doc.setFontSize(8);
-  doc.setFont("helvetica", "normal");
-  const addressLines = doc.splitTextToSize(companyInfo.address, pageWidth - 2 * margin - 35);
-  doc.text(addressLines, margin + 35, yPos);
-  yPos += addressLines.length * 4;
-
-  // Contact and GSTIN
-  doc.text(`${companyInfo.contacts} | GSTIN: ${companyInfo.gstin}`, margin + 35, yPos);
-  yPos += 8;
-
-  // Horizontal line
-  doc.setDrawColor(0, 0, 0);
-  doc.setLineWidth(0.5);
-  doc.line(margin, yPos, pageWidth - margin, yPos);
-  yPos += 10;
-
-  // Document Title
-  doc.setFontSize(14);
-  doc.setFont("helvetica", "bold");
-  doc.text("DELIVERY CHALLAN", pageWidth / 2, yPos, { align: "center" });
-  yPos += 10;
-
-  // Challan No and Date
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  doc.text(`Challan No: ${challan.challanNo || 'N/A'}`, margin, yPos);
-  doc.text(`Date: ${formatDate(challan.date)}`, pageWidth - margin - 50, yPos);
-  yPos += 10;
+  // Starting Y position after header
+  let yPos = 55;
 
   // Supplier and Recipient Details in two columns
   const colWidth = (pageWidth - 2 * margin - 5) / 2;
@@ -80,91 +76,138 @@ export function generateChallanPDF(challan, company = {}) {
   const col2X = margin + colWidth + 5;
 
   // Supplier Details (Left Column)
+  doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
+  doc.setTextColor(0, 0, 0);
   doc.text("From:", col1X, yPos);
   yPos += 5;
 
   doc.setFont("helvetica", "normal");
-  doc.text(challan.supplierName || '', col1X, yPos);
+  doc.text(challan.supplierName || "", col1X, yPos);
   yPos += 5;
 
+  let maxHeight = 0;
   if (challan.supplierAddress) {
     const supplierLines = doc.splitTextToSize(challan.supplierAddress, colWidth);
     doc.text(supplierLines, col1X, yPos);
-    const supplierHeight = supplierLines.length * 5;
-    
-    // Recipient Details (Right Column) - start at same Y position
-    const recipientStartY = yPos - 10;
-    doc.setFont("helvetica", "bold");
-    doc.text("To:", col2X, recipientStartY);
-    
-    doc.setFont("helvetica", "normal");
-    doc.text(challan.recipientName || '', col2X, recipientStartY + 5);
-    
-    if (challan.recipientAddress) {
-      const recipientLines = doc.splitTextToSize(challan.recipientAddress, colWidth);
-      doc.text(recipientLines, col2X, recipientStartY + 10);
-      const recipientHeight = recipientLines.length * 5;
-      yPos += Math.max(supplierHeight, recipientHeight);
-    } else {
-      yPos += supplierHeight;
-    }
-  } else {
-    // No supplier address, just add recipient
-    const recipientStartY = yPos - 10;
-    doc.setFont("helvetica", "bold");
-    doc.text("To:", col2X, recipientStartY);
-    
-    doc.setFont("helvetica", "normal");
-    doc.text(challan.recipientName || '', col2X, recipientStartY + 5);
-    
-    if (challan.recipientAddress) {
-      const recipientLines = doc.splitTextToSize(challan.recipientAddress, colWidth);
-      doc.text(recipientLines, col2X, recipientStartY + 10);
-      yPos += recipientLines.length * 5;
-    }
+    maxHeight = supplierLines.length * 5;
   }
-  
-  yPos += 10;
 
-  // Items Table
+  // Recipient Details (Right Column) - start at same Y position
+  const recipientStartY = yPos - 10;
+  doc.setFont("helvetica", "bold");
+  doc.text("To:", col2X, recipientStartY);
+
+  doc.setFont("helvetica", "normal");
+  doc.text(challan.recipientName || "", col2X, recipientStartY + 5);
+
+  if (challan.recipientAddress) {
+    const recipientLines = doc.splitTextToSize(challan.recipientAddress, colWidth);
+    doc.text(recipientLines, col2X, recipientStartY + 10);
+    maxHeight = Math.max(maxHeight, recipientLines.length * 5);
+  }
+
+  yPos += maxHeight + 10;
+
+  // Prepare items table data
   const itemsTableData = challan.items.map((item, index) => [
     index + 1,
-    item.description || '',
+    item.description || "",
     item.quantity || 0,
-    item.unit || '',
-    item.remarks || '',
+    item.unit || "",
+    item.remarks || "",
   ]);
 
+  /**
+   * ✅ CRITICAL: Multi-page pagination support using autoTable
+   * 
+   * The didDrawPage callback is crucial for multi-page documents:
+   * - It fires for EVERY page (including the first)
+   * - We redraw header/footer on each page
+   * - Margins prevent content from overlapping header/footer
+   * 
+   * The showHead: 'everyPage' ensures table headers repeat on all pages
+   * 
+   * How pagination works:
+   * 1. autoTable automatically detects when content exceeds page height
+   * 2. It creates a new page and continues rendering the table
+   * 3. didDrawPage fires for the new page, redrawing header/footer
+   * 4. Table headers are repeated automatically
+   * 5. Process continues until all rows are rendered
+   */
   autoTable(doc, {
     startY: yPos,
-    head: [['S.No', 'Description', 'Quantity', 'Unit', 'Remarks']],
-    body: itemsTableData,
-    theme: 'grid',
+    head: [["S.No", "Description", "Quantity", "Unit", "Remarks"]],
+    body: itemsTableData.length ? itemsTableData : [["", "", "", "", ""]],
+    theme: "grid",
     headStyles: {
-      fillColor: [0, 0, 139],
-      textColor: 255,
-      fontStyle: 'bold',
-      halign: 'center',
+      fillColor: [0, 0, 139], // Dark blue
+      textColor: [255, 255, 255],
+      fontStyle: "bold",
+      halign: "center",
+      fontSize: 10,
     },
     columnStyles: {
-      0: { halign: 'center', cellWidth: 15 },
-      1: { halign: 'left', cellWidth: 60 },
-      2: { halign: 'center', cellWidth: 25 },
-      3: { halign: 'center', cellWidth: 20 },
-      4: { halign: 'left', cellWidth: 'auto' },
+      0: { halign: "center", cellWidth: 15 },
+      1: { halign: "left", cellWidth: 60 },
+      2: { halign: "center", cellWidth: 25 },
+      3: { halign: "center", cellWidth: 20 },
+      4: { halign: "left", cellWidth: "auto" },
     },
     styles: {
       fontSize: 9,
       cellPadding: 3,
+      valign: "top",
     },
-    margin: { left: margin, right: margin },
+    // ✅ KEY FEATURE: Repeat header on every page
+    showHead: "everyPage",
+    // ✅ KEY FEATURE: Redraw custom header/footer on each new page
+    didDrawPage: () => {
+      drawHeader();
+      drawFooter();
+    },
+    // ✅ KEY FEATURE: Margins to keep space for header/footer
+    margin: {
+      top: PDF_MARGINS.headerTop + 15, // Space for header + supplier/recipient info
+      bottom: PDF_MARGINS.footerBottom + 5,
+      left: margin,
+      right: margin,
+    },
+    // Prevent rows from being split across pages
+    rowPageBreak: "auto",
   });
 
+  // Get Y position after items table
   yPos = doc.lastAutoTable.finalY + 10;
 
-  // Transport Details
-  if (challan.transportDetails && (challan.transportDetails.vehicleNo || challan.transportDetails.driverName)) {
+  /**
+   * Calculate total quantity for all items
+   * This provides a summary of total items in the challan
+   */
+  const totalQuantity = challan.items.reduce(
+    (sum, item) => sum + (Number(item.quantity) || 0),
+    0
+  );
+
+  // Display total quantity
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  doc.text(`Total Quantity: ${totalQuantity}`, pageWidth - margin - 50, yPos, {
+    align: "right",
+  });
+  yPos += 10;
+
+  /**
+   * Transport Details Section
+   * Only displayed on the last page if transport details are provided
+   */
+  if (
+    challan.transportDetails &&
+    (challan.transportDetails.vehicleNo || challan.transportDetails.driverName)
+  ) {
+    // Ensure enough space for transport details (minimum 30mm)
+    yPos = ensureSpace(doc, yPos, 30, drawHeader, drawFooter);
+
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
     doc.text("Transport Details:", margin, yPos);
@@ -182,8 +225,14 @@ export function generateChallanPDF(challan, company = {}) {
     yPos += 5;
   }
 
-  // Terms & Conditions
+  /**
+   * Terms & Conditions Section
+   * Only displayed on the last page if terms are provided
+   */
   if (challan.terms) {
+    // Ensure enough space for terms (minimum 40mm)
+    yPos = ensureSpace(doc, yPos, 40, drawHeader, drawFooter);
+
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
     doc.text("Terms & Conditions:", margin, yPos);
@@ -193,9 +242,12 @@ export function generateChallanPDF(challan, company = {}) {
     doc.setFontSize(9);
     const termsLines = doc.splitTextToSize(challan.terms, pageWidth - 2 * margin);
     termsLines.forEach((line) => {
+      // Check if we need a new page for each line
       if (yPos > pageHeight - 40) {
         doc.addPage();
-        yPos = margin;
+        drawHeader();
+        drawFooter();
+        yPos = PDF_MARGINS.headerTop + 15;
       }
       doc.text(line, margin, yPos);
       yPos += 5;
@@ -203,43 +255,33 @@ export function generateChallanPDF(challan, company = {}) {
     yPos += 10;
   }
 
-  // Signature Section
+  /**
+   * Signature Section
+   * Always displayed on the last page at the bottom
+   * Ensures proper spacing from the bottom of the page
+   */
+  // Ensure enough space for signatures (minimum 40mm)
+  yPos = ensureSpace(doc, yPos, 40, drawHeader, drawFooter);
+
+  // Position signatures at a comfortable distance from bottom
   yPos = Math.max(yPos, pageHeight - 50);
-  
+
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  
+
   // Supplier Signature (Left)
   doc.text("For " + (challan.supplierName || companyInfo.name), margin, yPos);
+  doc.setDrawColor(0, 0, 0);
   doc.line(margin, yPos + 15, margin + 50, yPos + 15);
   doc.text("Authorized Signatory", margin, yPos + 20);
-  
+
   // Recipient Signature (Right)
   const rightX = pageWidth - margin - 50;
   doc.text("Receiver's Signature", rightX, yPos);
   doc.line(rightX, yPos + 15, rightX + 50, yPos + 15);
   doc.text("Name & Stamp", rightX, yPos + 20);
 
-  // Footer
-  doc.setFontSize(8);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(128, 128, 128);
-  const footer = "This is a computer-generated delivery challan";
-  doc.text(footer, pageWidth / 2, pageHeight - 10, { align: "center" });
-
-  // Save PDF
-  const filename = `Challan_${challan.challanNo || 'draft'}_${Date.now()}.pdf`;
+  // Save PDF with descriptive filename
+  const filename = `Challan_${challan.challanNo || "draft"}_${companyInfo.name.replace(/\s+/g, "_")}.pdf`;
   doc.save(filename);
-}
-
-/**
- * Format date to readable format
- * @param {string} dateStr - Date string
- * @returns {string} Formatted date
- */
-function formatDate(dateStr) {
-  if (!dateStr) return 'N/A';
-  const date = new Date(dateStr);
-  const options = { year: 'numeric', month: 'long', day: 'numeric' };
-  return date.toLocaleDateString('en-IN', options);
 }
