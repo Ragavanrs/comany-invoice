@@ -236,6 +236,10 @@ export function formatDate(dateStr) {
   if (!dateStr) return "N/A";
   try {
     const date = new Date(dateStr);
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      return dateStr; // Return original string if invalid
+    }
     const options = { year: "numeric", month: "long", day: "numeric" };
     return date.toLocaleDateString("en-IN", options);
   } catch (err) {
