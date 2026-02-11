@@ -1,88 +1,66 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import image from "../../image.png"; 
-const toMoney = (n) => (Number(n) || 0).toFixed(2);
+import {
+  createInvoiceHeader,
+  createFooter,
+  toMoney,
+  numberToWordsIndian,
+  gstBreakup,
+  ensureSpace,
+} from "./commonComponents";
+import { PDF_MARGINS, DEFAULT_COMPANY_INFO } from "./constants";
 
-// Simple Indian system number to words (integer only)
-const numberToWordsIndian = (num) => {
-  const ones = ["","one","two","three","four","five","six","seven","eight","nine"];
-  const tens = ["","","twenty","thirty","forty","fifty","sixty","seventy","eighty","ninety"];
-  const teens = ["ten","eleven","twelve","thirteen","fourteen","fifteen","sixteen","seventeen","eighteen","nineteen"];
-  const n = Math.floor(Number(num) || 0);
-  if (n === 0) return "zero";
-  const chunk = (x) => {
-    let r = "";
-    if (x >= 100) { r += ones[Math.floor(x/100)]+" hundred "; x %= 100; }
-    if (x >= 20) { r += tens[Math.floor(x/10)]+" "; if (x%10) r += ones[x%10]; }
-    else if (x >= 10) { r += teens[x-10]; }
-    else if (x > 0) { r += ones[x]; }
-    return r.trim();
-  };
-  let res = "";
-  const crore = Math.floor(n/1e7);
-  const lakh  = Math.floor((n%1e7)/1e5);
-  const thousand = Math.floor((n%1e5)/1e3);
-  const hundred  = n%1e3;
-  if (crore)   res += chunk(crore) + " crore ";
-  if (lakh)    res += chunk(lakh) + " lakh ";
-  if (thousand)res += chunk(thousand) + " thousand ";
-  if (hundred) res += chunk(hundred);
-  return res.trim();
-};
-
-const gstBreakup = (amount, gstRate, gstType) => {
-  const base = Number(amount) || 0;
-  const rate = Number(gstRate) || 0;
-  if (gstType === "igst") return { igst: base * rate/100, cgst: 0, sgst: 0 };
-  const half = base * (rate/2) / 100;
-  return { igst: 0, cgst: half, sgst: half };
-};
-
+/**
+ * Generate Invoice PDF with multi-page pagination support
+ * 
+ * @param {Object} invoice - Invoice details
+ * @param {string} invoice.invoiceNo - Invoice number
+ * @param {string} invoice.date - Invoice date
+ * @param {string} invoice.poNo - Purchase order number
+ * @param {string} invoice.dcNo - Delivery challan number
+ * @param {string} invoice.customerName - Customer name
+ * @param {string} invoice.customerAddress - Customer address
+ * @param {string} invoice.partyGstin - Customer GSTIN
+ * @param {Array} invoice.items - Array of invoice items
+ * @param {Object} options - Additional options
+ * @param {string} options.gstType - Type of GST: "igst" or "cgst_sgst" (default: "igst")
+ * @param {Object} options.company - Company information (optional)
+ * 
+ * @example
+ * generateInvoicePDF({
+ *   invoiceNo: "INV001",
+ *   date: "2024-01-01",
+ *   items: [{ description: "Item 1", qty: 10, rate: 100, hsnCode: "1234" }],
+ *   ...
+ * }, { gstType: "igst", company: { name: "SURYA POWER", ... } });
+ */
 export function generateInvoicePDF(invoice, { gstType = "igst", company } = {}) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 12;
+  const margin = PDF_MARGINS.page;
 
-  // Common header/footer per page
+  // Merge with defaults
+  const companyInfo = { ...DEFAULT_COMPANY_INFO, ...company };
+
+  /**
+   * Draws the header for each page
+   * This is called for the first page and for each new page created by autoTable
+   */
   const drawHeader = () => {
-    // Logo (top-left)
-    const logoW = 30, logoH = 18;
-    const logoX = margin, logoY = 8;
-    doc.addImage(image, "PNG", logoX, logoY, logoW, logoH);
-
-    const afterLogoY = logoY + logoH + 4;
-    doc.setTextColor(0,0,0);
-    doc.setFont("helvetica","normal");
-    doc.setFontSize(9);
-    doc.text((company?.gstin || "GSTIN: 33AKNPR3914K1ZT"), margin, afterLogoY);
-
-    // Title + company
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(16);
-    doc.text("TAX INVOICE", pageWidth/2, 15, { align: "center" });
-
-    // NOTE: removed the 2nd duplicate addImage here
-    doc.setFontSize(18);
-    doc.setTextColor(0,0,139);
-    doc.text((company?.name || "SURYA POWER"), pageWidth/2, 24, { align: "center" });
-
-    doc.setTextColor(0,0,0);
-    doc.setFont("helvetica","normal");
-    doc.setFontSize(9);
-    doc.text((company?.tagline || "DG Set Hiring, Old DG Set Buying, Selling & Servicing"), pageWidth/2, 30, { align: "center" });
-    doc.text((company?.address || "No.1/11, G.N.T Road, Padiyanallur Redhills, Chennai, Thiruvallur, Tamil Nadu - 600 052"), pageWidth/2, 35, { align: "center" });
-    doc.text((company?.contacts || "Mob: 9790987190 / 9840841887"), pageWidth - margin, 15, { align: "right" });
-
-    // divider
-    doc.setDrawColor(0,0,139);
-    doc.setLineWidth(0.8);
-    doc.line(margin, 40, pageWidth - margin, 40);
+    createInvoiceHeader(doc, {
+      documentTitle: "TAX INVOICE",
+      company: companyInfo,
+    });
   };
 
+  /**
+   * Draws the footer for each page
+   * This is called for the first page and for each new page created by autoTable
+   */
   const drawFooter = () => {
-    doc.setFontSize(8);
-    doc.text(`Page ${doc.internal.getNumberOfPages()}`, pageWidth - margin, pageHeight - 5, { align:"right" });
+    createFooter(doc, {
+      showPageNumber: true,
+    });
   };
 
   // ✅ Draw header/footer for page 1 BEFORE any tables
@@ -97,26 +75,26 @@ export function generateInvoicePDF(invoice, { gstType = "igst", company } = {}) 
     [`DC No: ${invoice.dcNo || ""}`],
   ];
   const billTo = [
-    [{ content: "Bill To:", styles:{ fontStyle: "bold" } }],
+    [{ content: "Bill To:", styles: { fontStyle: "bold" } }],
     [invoice.customerName || ""],
-    ...((invoice.customerAddress || "").split("\n").map(l => [l])),
+    ...((invoice.customerAddress || "").split("\n").map((l) => [l])),
     [invoice.partyGstin ? `GSTIN: ${invoice.partyGstin}` : ""],
   ];
 
-  autoTable(doc,{
+  autoTable(doc, {
     startY: 45,
     body: invLeft,
     theme: "plain",
     styles: { fontSize: 10, cellPadding: 0.8 },
-    margin: { left: margin, right: pageWidth/2 + 2 }
+    margin: { left: margin, right: pageWidth / 2 + 2 },
   });
 
-  autoTable(doc,{
+  autoTable(doc, {
     startY: 45,
     body: billTo,
     theme: "plain",
     styles: { fontSize: 10, cellPadding: 0.8 },
-    margin: { left: pageWidth/2, right: margin }
+    margin: { left: pageWidth / 2, right: margin },
   });
 
   // ---------- Items ----------
@@ -124,23 +102,45 @@ export function generateInvoicePDF(invoice, { gstType = "igst", company } = {}) 
     const qty = Number(it.qty) || 0;
     const rate = Number(it.rate) || 0;
     const base = qty * rate;
-    return [ i + 1, it.description || "", it.hsnCode || it.hsn || "", qty, toMoney(rate), toMoney(base) ];
+    return [
+      i + 1,
+      it.description || "",
+      it.hsnCode || it.hsn || "",
+      qty,
+      toMoney(rate),
+      toMoney(base),
+    ];
   });
 
-  autoTable(doc,{
+  /**
+   * ✅ CRITICAL: Multi-page pagination support using autoTable
+   * 
+   * The didDrawPage callback is crucial for multi-page documents:
+   * - It fires for EVERY page (including the first)
+   * - We redraw header/footer on each page
+   * - Margins prevent content from overlapping header/footer
+   * 
+   * How pagination works:
+   * 1. autoTable automatically detects when content exceeds page height
+   * 2. It creates a new page and continues rendering the table
+   * 3. didDrawPage fires for the new page, redrawing header/footer
+   * 4. Table headers are repeated automatically (not explicitly needed for single-head tables)
+   * 5. Process continues until all rows are rendered
+   */
+  autoTable(doc, {
     startY: Math.max(doc.lastAutoTable?.finalY || 60, 60) + 6,
-    head: [["S.No","Description","HSN/SAC","Qty","Rate","Amount"]],
-    body: items.length ? items : [["","","","","",""]],
+    head: [["S.No", "Description", "HSN/SAC", "Qty", "Rate", "Amount"]],
+    body: items.length ? items : [["", "", "", "", "", ""]],
     styles: { fontSize: 9, cellPadding: 2, valign: "top" },
     columnStyles: {
       0: { halign: "center", cellWidth: 12 },
-      1: { halign: "left",   cellWidth: 80 },
+      1: { halign: "left", cellWidth: 80 },
       2: { halign: "center", cellWidth: 22 },
       3: { halign: "center", cellWidth: 16 },
-      4: { halign: "right",  cellWidth: 22 },
-      5: { halign: "right",  cellWidth: 24 },
+      4: { halign: "right", cellWidth: 22 },
+      5: { halign: "right", cellWidth: 24 },
     },
-    headStyles: { fillColor: [0,0,139], textColor: [255,255,255] },
+    headStyles: { fillColor: [0, 0, 139], textColor: [255, 255, 255] },
     theme: "grid",
     didParseCell: (data) => {
       if (data.section === "body" && data.column.index === 1) {
@@ -149,86 +149,139 @@ export function generateInvoicePDF(invoice, { gstType = "igst", company } = {}) 
       }
     },
     // ✅ Repeat header/footer when this (long) table spans to new pages
-    didDrawPage: () => { drawHeader(); drawFooter(); },
-    margin: { top: 42, bottom: 18, left: margin, right: margin } // keep clear of header/footer
+    didDrawPage: () => {
+      drawHeader();
+      drawFooter();
+    },
+    // ✅ Keep clear of header/footer
+    margin: {
+      top: PDF_MARGINS.headerTop,
+      bottom: PDF_MARGINS.footerBottom,
+      left: margin,
+      right: margin,
+    },
+    // Prevent rows from being split across pages
+    rowPageBreak: "auto",
   });
 
   const afterItemsY = doc.lastAutoTable.finalY + 8;
 
   // ---------- Totals ----------
-  const subtotal = (invoice.items || []).reduce((s, it) => s + ((Number(it.qty)||0) * (Number(it.rate)||0)), 0);
+  const subtotal = (invoice.items || []).reduce(
+    (s, it) => s + (Number(it.qty) || 0) * (Number(it.rate) || 0),
+    0
+  );
   const gst = gstBreakup(subtotal, 18, gstType);
   const grand = subtotal + gst.igst + gst.cgst + gst.sgst;
 
+  // Amount in words
   const words = `Amount in words: Rupees ${numberToWordsIndian(Math.round(grand))} only`;
-  autoTable(doc,{
+  autoTable(doc, {
     startY: afterItemsY,
     body: [[words]],
     styles: { fontSize: 10, cellPadding: 3 },
     theme: "plain",
-    margin: { left: margin, right: pageWidth/2 + 2 }
+    margin: { left: margin, right: pageWidth / 2 + 2 },
   });
 
   const rightStartY = doc.lastAutoTable.finalY;
   const totalsRows = [
-    [{content: "Subtotal", styles: { fontStyle: "bold" }}, {content: `₹ ${toMoney(subtotal)}`, styles: { halign: "right" }}],
+    [
+      { content: "Subtotal", styles: { fontStyle: "bold" } },
+      { content: `₹ ${toMoney(subtotal)}`, styles: { halign: "right" } },
+    ],
     ...(gstType === "igst"
-      ? [[{content: "IGST (18%)"}, {content: `₹ ${toMoney(gst.igst)}`, styles:{ halign:"right" }}]]
-      : [
-          [{content: "CGST (9%)"}, {content: `₹ ${toMoney(gst.cgst)}`, styles:{ halign:"right" }}],
-          [{content: "SGST (9%)"}, {content: `₹ ${toMoney(gst.sgst)}`, styles:{ halign:"right" }}],
+      ? [
+          [
+            { content: "IGST (18%)" },
+            { content: `₹ ${toMoney(gst.igst)}`, styles: { halign: "right" } },
+          ],
         ]
-    ),
-    [{content: "Grand Total", styles: { fontStyle: "bold" }}, {content: `₹ ${toMoney(grand)}`, styles: { halign: "right", fontStyle: "bold" }}],
+      : [
+          [
+            { content: "CGST (9%)" },
+            { content: `₹ ${toMoney(gst.cgst)}`, styles: { halign: "right" } },
+          ],
+          [
+            { content: "SGST (9%)" },
+            { content: `₹ ${toMoney(gst.sgst)}`, styles: { halign: "right" } },
+          ],
+        ]),
+    [
+      { content: "Grand Total", styles: { fontStyle: "bold" } },
+      {
+        content: `₹ ${toMoney(grand)}`,
+        styles: { halign: "right", fontStyle: "bold" },
+      },
+    ],
   ];
 
-  autoTable(doc,{
+  autoTable(doc, {
     startY: rightStartY,
     body: totalsRows,
     theme: "grid",
     styles: { fontSize: 10, cellPadding: 2 },
     columnStyles: { 0: { cellWidth: 40 }, 1: { cellWidth: 40, halign: "right" } },
-    margin: { left: pageWidth - margin - 85, right: margin }
+    margin: { left: pageWidth - margin - 85, right: margin },
   });
 
   // ---------- Bank + terms ----------
-  const afterTotalsY = doc.lastAutoTable.finalY + 8;
-  autoTable(doc,{
+  // Ensure enough space for bank details and terms (minimum 80mm)
+  let afterTotalsY = doc.lastAutoTable.finalY + 8;
+  afterTotalsY = ensureSpace(doc, afterTotalsY, 80, drawHeader, drawFooter);
+
+  autoTable(doc, {
     startY: afterTotalsY,
     body: [
-      [{ content: (company?.bankTitle || "TAMILNAD MERCANTILE BANK"), styles: { fontStyle: "bold" } }],
-      [`NAME: ${company?.bankName || "SURYA POWER"}`],
-      [`AC.NO: ${company?.accountNo || "22815005800163"}`],
-      [`BRANCH: ${company?.branch || "NARAVARIKUPPAM BRANCH"}`],
-      [`IFSC CODE: ${company?.ifsc || "TMBL0000228"}`],
+      [
+        {
+          content: companyInfo.bankTitle || "TAMILNAD MERCANTILE BANK",
+          styles: { fontStyle: "bold" },
+        },
+      ],
+      [`NAME: ${companyInfo.bankName || "SURYA POWER"}`],
+      [`AC.NO: ${companyInfo.accountNo || "22815005800163"}`],
+      [`BRANCH: ${companyInfo.branch || "NARAVARIKUPPAM BRANCH"}`],
+      [`IFSC CODE: ${companyInfo.ifsc || "TMBL0000228"}`],
     ],
     theme: "plain",
     styles: { fontSize: 9, cellPadding: 1.2 },
-    margin: { left: margin, right: margin }
+    margin: { left: margin, right: margin },
   });
 
-  autoTable(doc,{
+  autoTable(doc, {
     startY: doc.lastAutoTable.finalY + 4,
     body: [
       ["Terms & Conditions:"],
-      ["1. Interest 24% p.a. will be charged on all invoices if not paid within due date."],
+      [
+        "1. Interest 24% p.a. will be charged on all invoices if not paid within due date.",
+      ],
       ["2. All payment to be made only by crossed cheques drawn in our favour."],
       ["3. PAYMENT WITHIN .............. DAYS"],
     ],
     theme: "plain",
-    styles: { fontSize: 9, cellPadding: 1.2 }
+    styles: { fontSize: 9, cellPadding: 1.2 },
   });
 
   // ---------- Signature ----------
-  const sigY = doc.lastAutoTable.finalY + 10;
-  doc.setFont("helvetica","bold");
+  // Ensure enough space for signature (minimum 30mm)
+  let sigY = doc.lastAutoTable.finalY + 10;
+  sigY = ensureSpace(doc, sigY, 30, drawHeader, drawFooter);
+
+  doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
-  doc.text(`For ${(company?.name || "SURYA POWER")}`, pageWidth - margin - 50, sigY);
-  doc.setDrawColor(0,0,0);
+  doc.setTextColor(0, 0, 0);
+  doc.text(
+    `For ${companyInfo.name || "SURYA POWER"}`,
+    pageWidth - margin - 50,
+    sigY
+  );
+  doc.setDrawColor(0, 0, 0);
   doc.line(pageWidth - margin - 50, sigY + 6, pageWidth - margin, sigY + 6);
   doc.setFontSize(9);
   doc.text("Proprietor", pageWidth - margin - 50, sigY + 12);
 
-  const fileName = `${invoice.invoiceNo || "Invoice"}_SURYA_POWER.pdf`;
+  // Save PDF with descriptive filename
+  const fileName = `Invoice_${invoice.invoiceNo || "Draft"}_${companyInfo.name.replace(/\s+/g, "_")}.pdf`;
   doc.save(fileName);
 }
