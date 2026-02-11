@@ -1,6 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-import jsPDF from "jspdf";
-import "jspdf-autotable";
 import "./invoice.css"; // optional external styling
 import { generateInvoicePDF } from "./pdfGenerator";
 const TaxInvoiceForm = () => {
@@ -65,54 +63,54 @@ const TaxInvoiceForm = () => {
     return invoiceDetails.items.reduce((total, item) => total + item.amount, 0).toFixed(2);
   };
 
-  // Improved number to words conversion
-  const numberToWords = (num) => {
-    // Handle edge cases
-    if (!num || isNaN(num) || num === 0) return 'zero';
-    
-    const ones = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
-    const tens = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
-    const teens = ['ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
-    
-    // Convert to integer for processing
-    const integerPart = Math.floor(parseFloat(num));
-    
-    if (integerPart === 0) return 'zero';
-    
-    let result = '';
-    const crores = Math.floor(integerPart / 10000000);
-    const lakhs = Math.floor((integerPart % 10000000) / 100000);
-    const thousands = Math.floor((integerPart % 100000) / 1000);
-    const hundreds = Math.floor((integerPart % 1000) / 100);
-    const tensAndOnes = integerPart % 100;
-    
-    if (crores > 0) {
-      result += numberToWords(crores) + ' crore ';
-    }
-    if (lakhs > 0) {
-      result += numberToWords(lakhs) + ' lakh ';
-    }
-    if (thousands > 0) {
-      result += numberToWords(thousands) + ' thousand ';
-    }
-    if (hundreds > 0) {
-      result += ones[hundreds] + ' hundred ';
-    }
-    if (tensAndOnes > 0) {
-      if (tensAndOnes < 10) {
-        result += ones[tensAndOnes];
-      } else if (tensAndOnes < 20) {
-        result += teens[tensAndOnes - 10];
-      } else {
-        result += tens[Math.floor(tensAndOnes / 10)];
-        if (tensAndOnes % 10 > 0) {
-          result += ' ' + ones[tensAndOnes % 10];
-        }
-      }
-    }
-    
-    return result.trim() || 'zero';
-  };
+  // Improved number to words conversion - Currently handled by pdfGenerator.js
+  // const numberToWords = (num) => {
+  //   // Handle edge cases
+  //   if (!num || isNaN(num) || num === 0) return 'zero';
+  //   
+  //   const ones = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
+  //   const tens = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+  //   const teens = ['ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+  //   
+  //   // Convert to integer for processing
+  //   const integerPart = Math.floor(parseFloat(num));
+  //   
+  //   if (integerPart === 0) return 'zero';
+  //   
+  //   let result = '';
+  //   const crores = Math.floor(integerPart / 10000000);
+  //   const lakhs = Math.floor((integerPart % 10000000) / 100000);
+  //   const thousands = Math.floor((integerPart % 100000) / 1000);
+  //   const hundreds = Math.floor((integerPart % 1000) / 100);
+  //   const tensAndOnes = integerPart % 100;
+  //   
+  //   if (crores > 0) {
+  //     result += numberToWords(crores) + ' crore ';
+  //   }
+  //   if (lakhs > 0) {
+  //     result += numberToWords(lakhs) + ' lakh ';
+  //   }
+  //   if (thousands > 0) {
+  //     result += numberToWords(thousands) + ' thousand ';
+  //   }
+  //   if (hundreds > 0) {
+  //     result += ones[hundreds] + ' hundred ';
+  //   }
+  //   if (tensAndOnes > 0) {
+  //     if (tensAndOnes < 10) {
+  //       result += ones[tensAndOnes];
+  //     } else if (tensAndOnes < 20) {
+  //       result += teens[tensAndOnes - 10];
+  //     } else {
+  //       result += tens[Math.floor(tensAndOnes / 10)];
+  //       if (tensAndOnes % 10 > 0) {
+  //         result += ' ' + ones[tensAndOnes % 10];
+  //       }
+  //     }
+  //   }
+  //   
+  //   return result.trim() || 'zero';
+  // };
 
   // DOM manipulation effects
   useEffect(() => {
@@ -133,32 +131,32 @@ const TaxInvoiceForm = () => {
   }, []);
 
   // Add smooth scrolling and form validation feedback
-  const scrollToElement = (elementId) => {
-    const element = document.getElementById(elementId);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      element.focus();
-    }
-  };
+  // const scrollToElement = (elementId) => {
+  //   const element = document.getElementById(elementId);
+  //   if (element) {
+  //     element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  //     element.focus();
+  //   }
+  // };
 
   // Enhanced form validation with visual feedback
-  const validateForm = () => {
-    const requiredFields = ['invoiceNo', 'date', 'customerName'];
-    let isValid = true;
-    
-    requiredFields.forEach(fieldName => {
-      const field = document.querySelector(`[name="${fieldName}"]`);
-      if (field && !field.value.trim()) {
-        field.classList.add('error');
-        isValid = false;
-      } else if (field) {
-        field.classList.remove('error');
-        field.classList.add('success');
-      }
-    });
-    
-    return isValid;
-  };
+  // const validateForm = () => {
+  //   const requiredFields = ['invoiceNo', 'date', 'customerName'];
+  //   let isValid = true;
+  //   
+  //   requiredFields.forEach(fieldName => {
+  //     const field = document.querySelector(`[name="${fieldName}"]`);
+  //     if (field && !field.value.trim()) {
+  //       field.classList.add('error');
+  //       isValid = false;
+  //     } else if (field) {
+  //       field.classList.remove('error');
+  //       field.classList.add('success');
+  //     }
+  //   });
+  //   
+  //   return isValid;
+  // };
 
   // Add input validation on blur
   const handleInputBlur = (e) => {
@@ -187,32 +185,38 @@ const TaxInvoiceForm = () => {
     }
   };
 
-  // Show success toast
-  const showSuccessToast = () => {
-    setShowSuccess(true);
-    if (successToastRef.current) {
-      const toast = new window.bootstrap.Toast(successToastRef.current);
-      toast.show();
-    }
-  };
+  // Show success toast - for future use with Bootstrap
+  // const showSuccessToast = () => {
+  //   setShowSuccess(true);
+  //   if (successToastRef.current) {
+  //     const toast = new window.bootstrap.Toast(successToastRef.current);
+  //     toast.show();
+  //   }
+  // };
 
 // inside your button handler:
 const onGenerate = () => {
-  generateInvoicePDF(invoiceDetails, {
-    gstType: {gstType}, // or "intra" for CGST+SGST
-    company: {
-      name: "SURYA POWER",
-      tagline: "DG Set Hiring, Old DG Set Buying, Selling & Servicing",
-      address: "No.1/11, G.N.T Road, Padiyanallur Redhills, Chennai, Thiruvallur, Tamil Nadu - 600 052",
-      gstin: "33AKNPR3914K1ZT",
-      contacts: "Mob: 9790987190 / 9840841887",
-      bankTitle: "TAMILNAD MERCANTILE BANK",
-      bankName: "SURYA POWER",
-      accountNo: "22815005800163",
-      branch: "NARAVARIKUPPAM BRANCH",
-      ifsc: "TMBL0000228",
-    }
-  });
+  setIsGenerating(true);
+  try {
+    generateInvoicePDF(invoiceDetails, {
+      gstType: gstType, // or "intra" for CGST+SGST
+      company: {
+        name: "SURYA POWER",
+        tagline: "DG Set Hiring, Old DG Set Buying, Selling & Servicing",
+        address: "No.1/11, G.N.T Road, Padiyanallur Redhills, Chennai, Thiruvallur, Tamil Nadu - 600 052",
+        gstin: "33AKNPR3914K1ZT",
+        contacts: "Mob: 9790987190 / 9840841887",
+        bankTitle: "TAMILNAD MERCANTILE BANK",
+        bankName: "SURYA POWER",
+        accountNo: "22815005800163",
+        branch: "NARAVARIKUPPAM BRANCH",
+        ifsc: "TMBL0000228",
+      }
+    });
+    setShowSuccess(true);
+  } finally {
+    setIsGenerating(false);
+  }
 };
 
 
