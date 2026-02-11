@@ -1,0 +1,111 @@
+/* Module-specific styles */
+
+/* Dashboard Home Module Cards */
+.dashboard-home .module-card {
+  transition: all 0.3s ease;
+  border: 1px solid var(--border-color);
+}
+
+.dashboard-home .module-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-lg);
+}
+
+.dashboard-home .module-icon {
+  font-size: 3rem;
+}
+
+.dashboard-home .welcome-banner {
+  background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-hover) 100%);
+  color: white;
+  padding: 2rem;
+  border-radius: 0.5rem;
+  box-shadow: var(--shadow-md);
+}
+
+[data-theme="dark"] .dashboard-home .welcome-banner {
+  background: linear-gradient(135deg, var(--accent-hover) 0%, var(--accent-color) 100%);
+}
+
+/* Letter Preview Styles */
+.letter-preview {
+  background-color: white;
+  color: #000;
+  padding: 2rem;
+  border: 1px solid var(--border-color);
+  border-radius: 0.25rem;
+  font-family: 'Times New Roman', Times, serif;
+  line-height: 1.6;
+  min-height: 500px;
+}
+
+/* Table Styles for Forms */
+.item-table {
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
+.item-table th {
+  background-color: var(--bg-secondary);
+  font-weight: 600;
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+}
+
+.item-table td {
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+}
+
+.item-table input,
+.item-table select {
+  width: 100%;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 0.25rem;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+/* Responsive table */
+@media (max-width: 768px) {
+  .item-table {
+    font-size: 0.875rem;
+  }
+
+  .item-table input,
+  .item-table select {
+    padding: 0.25rem;
+    font-size: 0.875rem;
+  }
+}
+
+/* Success Alert */
+.alert-success {
+  background-color: var(--success-color);
+  color: white;
+  border-color: var(--success-color);
+}
+
+/* Form validation styles */
+.form-control.is-invalid,
+.form-select.is-invalid {
+  border-color: var(--danger-color);
+}
+
+.form-control.is-valid,
+.form-select.is-valid {
+  border-color: var(--success-color);
+}
+
+.invalid-feedback {
+  color: var(--danger-color);
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+.valid-feedback {
+  color: var(--success-color);
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
