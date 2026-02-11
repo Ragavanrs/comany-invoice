@@ -54,9 +54,9 @@ A modern, comprehensive document management system for creating, managing, and e
 ## Technology Stack
 
 - **Frontend Framework:** React 18.2.0
-- **Routing:** React Router DOM 6.20.0
-- **Styling:** Bootstrap 5.3.0
-- **Icons:** Bootstrap Icons
+- **Routing:** React Router DOM 6.30.3
+- **Styling:** Bootstrap 5.3.8
+- **Icons:** Bootstrap Icons 1.13.1, React Icons 4.12.0
 - **PDF Generation:** jsPDF 2.5.2 with jspdf-autotable 3.8.4
 - **Storage:** LocalStorage for data persistence
 
