@@ -1,8 +1,8 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import Sidebar from './common/Sidebar';
-import Header from './common/Header';
-import '../styles/dashboard.css';
+import Sidebar from './components/common/Sidebar';
+import Header from './components/common/Header';
+import './styles/dashboard.css';
 
 /**
  * Dashboard Component

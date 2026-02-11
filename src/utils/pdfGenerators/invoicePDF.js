@@ -1,6 +1,6 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import image from "./image.png"; 
+import image from "../../image.png"; 
 const toMoney = (n) => (Number(n) || 0).toFixed(2);
 
 // Simple Indian system number to words (integer only)

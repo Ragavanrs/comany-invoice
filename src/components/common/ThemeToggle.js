@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getTheme, saveTheme } from '../utils/storage';
+import { getTheme, saveTheme } from '../../utils/storage';
 
 /**
  * ThemeToggle Component
