@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 
 /**
  * InvoiceForm Component
@@ -292,6 +293,13 @@ const InvoiceForm = ({ invoice, onSave, onCancel, onDownload }) => {
       </div>
     </div>
   );
+};
+
+InvoiceForm.propTypes = {
+  invoice: PropTypes.object,
+  onSave: PropTypes.func.isRequired,
+  onCancel: PropTypes.func.isRequired,
+  onDownload: PropTypes.func.isRequired,
 };
 
 export default InvoiceForm;
